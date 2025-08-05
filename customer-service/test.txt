@@ -1,0 +1,6 @@
+nom complet: Jean Dupont
+email: jean@example.com
+satut marital: marie interressé
+employeur: privee
+motif: voyag au maroc
+bonjour je suis interressé par un credit
