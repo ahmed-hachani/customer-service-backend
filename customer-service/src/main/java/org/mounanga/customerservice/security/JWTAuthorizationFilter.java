@@ -10,7 +10,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jetbrains.annotations.NotNull;
-
 import org.mounanga.customerservice.configuration.ApplicationProperties;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -88,7 +87,10 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
         List<String> roles = jwt.getClaims().get(ROLES).asList(String.class);
 
         if (username != null && roles != null) {
-            List<SimpleGrantedAuthority> authorities = roles.stream().map(SimpleGrantedAuthority::new).toList();
+            // ✅ Add ROLE_ prefix so Spring Security recognizes it
+            List<SimpleGrantedAuthority> authorities = roles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .toList();
 
             UserDetails userDetails = new User(username, "", authorities);
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

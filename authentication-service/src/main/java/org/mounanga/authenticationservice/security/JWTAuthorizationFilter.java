@@ -1,5 +1,6 @@
 package org.mounanga.authenticationservice.security;
 
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -22,6 +26,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -39,26 +44,66 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
+
         String header = request.getHeader(AUTHORIZATION);
-        if(header == null || !header.startsWith(BEARER)) {
+        if (header == null || !header.startsWith(BEARER)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        JWTVerifier verifier = JWT.require(Algorithm.HMAC256(properties.getJwtSecret())).build();
-        String jwt= header.substring(7);
-        DecodedJWT decodedJWT = verifier.verify(jwt);
-        String username = decodedJWT.getSubject();
-        List<String> roles = decodedJWT.getClaims().get(ROLES).asList(String.class);
+        String token = header.substring(7);
+        try {
+            DecodedJWT jwt = validateToken(token);
+            if (jwt == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid JWT token");
+                return;
+            }
 
-        Collection<GrantedAuthority> authorities = new ArrayList<>();
-        for (String role : roles){
-            authorities.add(new SimpleGrantedAuthority(role));
+            if (!isTokenExpired(jwt)) {
+                setUpSpringAuthentication(jwt, request);
+            } else {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Token has expired");
+                return;
+            }
+        } catch (JWTVerificationException exception) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Invalid JWT token");
+            return;
         }
 
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username,null,authorities);
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         filterChain.doFilter(request, response);
+    }
+
+    private DecodedJWT validateToken(String token) throws JWTVerificationException {
+        Algorithm algorithm = Algorithm.HMAC256(properties.getJwtSecret());
+        JWTVerifier verifier = JWT.require(algorithm).build();
+        return verifier.verify(token);
+    }
+
+    private boolean isTokenExpired(@NotNull DecodedJWT jwt) {
+        Date expiration = jwt.getExpiresAt();
+        return expiration.before(new Date());
+    }
+
+    private void setUpSpringAuthentication(@NotNull DecodedJWT jwt, HttpServletRequest request) {
+        String username = jwt.getSubject();
+        List<String> roles = jwt.getClaims().get(ROLES).asList(String.class);
+
+        if (username != null && roles != null) {
+            // ✅ Add ROLE_ prefix so Spring Security recognizes it
+            List<SimpleGrantedAuthority> authorities = roles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .toList();
+
+            UserDetails userDetails = new User(username, "", authorities);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()
+            );
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
     }
 
 }

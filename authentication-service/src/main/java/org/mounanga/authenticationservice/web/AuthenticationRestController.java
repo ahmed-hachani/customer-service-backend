@@ -3,11 +3,9 @@ package org.mounanga.authenticationservice.web;
 import org.mounanga.authenticationservice.dto.LoginRequestDTO;
 import org.mounanga.authenticationservice.dto.LoginResponseDTO;
 import org.mounanga.authenticationservice.service.AuthenticationService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin()
 @RestController
 @RequestMapping("/authentication")
 public class AuthenticationRestController {

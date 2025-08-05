@@ -56,7 +56,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             log.info("Authentication successful");
             final String jwt = generateToken(user);
             updateUserLastLoginDate(user);
-            return new LoginResponseDTO(jwt, user.isPasswordNeedToBeModified());
+            List<String> roleNames = user.getRoles().stream()
+                    .map(Role::getName)
+                    .toList();
+            return new LoginResponseDTO(jwt, user.isPasswordNeedToBeModified(), roleNames);
         }else{
             log.error("Authentication failed for user: {}", dto.username());
             throw new UserNotAuthenticatedException("User not authenticated");

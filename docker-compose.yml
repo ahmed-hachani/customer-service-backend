@@ -1,6 +1,32 @@
 version: '3.8'
 
 services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - bank-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - bank-network
+
   discovery-service:
     image: discovery-service
     container_name: discovery-service
@@ -35,7 +61,7 @@ services:
       - "8885:8885"
     environment:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
-      - MAIL_HOST=172.18.0.4
+      - MAIL_HOST=localhost
       - MAIL_PORT=1025
       - MAIL_USERNAME=brody
       - MAIL_PASSWORD=brody
@@ -57,7 +83,7 @@ services:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
       - MYSQL_USER=root
       - MYSQL_PWD=root
-      - MYSQL_HOST=172.18.0.2
+      - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=utilisateur
       - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
@@ -65,7 +91,7 @@ services:
     depends_on:
       - discovery-service
       - gateway-service
-      - notification-service
+      - mysql
     networks:
       - bank-network
 
@@ -80,7 +106,7 @@ services:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
       - MYSQL_USER=root
       - MYSQL_PWD=root
-      - MYSQL_HOST=172.18.0.2
+      - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=customer_db
       - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
@@ -88,7 +114,7 @@ services:
     depends_on:
       - discovery-service
       - gateway-service
-      - notification-service
+      - mysql
     networks:
       - bank-network
 
@@ -103,10 +129,10 @@ services:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
       - MYSQL_USER=root
       - MYSQL_PWD=root
-      - MYSQL_HOST=172.18.0.2
+      - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=account_db
-      - AXON_HOST=172.18.0.3
+      - AXON_HOST=localhost
       - AXON_PORT=8124
       - AXON_CONSOLE=df10b708-0:6p47cea5j2ff4ae0a17p227163886825
       - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
@@ -115,9 +141,13 @@ services:
       - discovery-service
       - gateway-service
       - customer-service
+      - mysql
     networks:
       - bank-network
 
+volumes:
+  mysql-data:
+
 networks:
   bank-network:
-    external: true
+    driver: bridge

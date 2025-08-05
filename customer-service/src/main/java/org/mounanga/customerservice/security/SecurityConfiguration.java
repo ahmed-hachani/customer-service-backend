@@ -1,5 +1,6 @@
 package org.mounanga.customerservice.security;
 
+import jakarta.ws.rs.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -26,7 +27,15 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests -> requests
+                        .requestMatchers( "/api/ocr/**").permitAll()
+                        .requestMatchers( "/api/charts/**").permitAll()
+                        .requestMatchers( "/uploads/cin/**").permitAll()
                         .requestMatchers("/intern/**", "/actuator/**").permitAll()
+                        .requestMatchers("/api/interest-rate/**").permitAll()
+                        .requestMatchers("/scoring-parameters/**").permitAll()
+                        .requestMatchers("/score-thresholds/**").permitAll()
+
+
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
                 .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
